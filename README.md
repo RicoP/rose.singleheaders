@@ -7,6 +7,17 @@ __________________________________________
 
 Using `rose/ini.hpp`, you can parse an `ini` file and extract its contents into variables. Here's an example of how to use the library:
 
+### Ini file structure
+A ini file is made out of sections enclosed by `[SECTION NAME]` followed by labels followed by `=` followed by a value. When a label comes before any other action it defaults to the `[GLOBAL]` section.
+the values of a label can be strings or numbers and always end with the end of the line. A line that starts with a `;` counbts as a comment and will be skipped.
+
+```ini
+; My .ini file
+[section]
+label = value
+```
+
+
 ### Code Example
 
 ```cpp
@@ -14,6 +25,8 @@ Using `rose/ini.hpp`, you can parse an `ini` file and extract its contents into 
 
 // text must be a non-const zero terminated char array.
 char text[] = R"___(
+    date = 26th of march 2017
+
     [ImageData]
     image = splat1.dds
     height = 1024
@@ -22,6 +35,7 @@ char text[] = R"___(
 )___";
 
 // Variables to store extracted data
+const char *date = nullptr;
 const char *image = nullptr;
 long long width = 0;
 long long height = 0;
@@ -29,6 +43,7 @@ double pixelsum = 0;
 
 // Example INI parsing logic
 INI_BEGIN_TEXT(text)
+    INI_STRING(GLOBAL, date);
     INI_STRING(ImageData, image) {
         if (char *last_slash = strrchr(pathBuffer, '/')) {
             // Replace after the last slash
@@ -37,8 +52,6 @@ INI_BEGIN_TEXT(text)
             // No slash, replace the whole string
             strcpy(pathBuffer, image);
         }
-        puts(pathBuffer);
-        splat.texture = LoadTexture(pathBuffer);
     }
     INI_LONG(ImageData, width);
     INI_LONG(ImageData, height);
@@ -49,33 +62,33 @@ INI_END();
 ### Explanation
 * INI_BEGIN_TEXT and INI_END define the scope of parsing.
 * INI_STRING, INI_LONG, and INI_DOUBLE are macros to extract specific keys (image, width, height, and pixelsum) under a section (ImageData) in the .ini file.
-* The macro can end with a semicolon indicating the end ofr be wollowed up with a scope section `{...}` where the new value is handled in a specific way 
+    * INI_STRING will read the entire line until it sees a return character or the end of the file. It will skip over leading or trailing whiespaces. 
+    * INI_LONG will read a whole number.
+    * INI_DOUBLE will read a floating point number with double precission.
+* The macro can end with a semicolon indicating the end ofr be wollowed up with a scope section `{...}` where the new value is handled in a specific way
+* When a ini file starts with values with no section they default in the `GLOBAL` section.
 
+## Important
+Note that all `const char *` are pointer into the passed in `text` variable and their lifetime is bound to the lifetime of `text`.
 
-### Globals
-When a ini file starts with values with no section they default in the `GLOBAL` section. 
+## Error handling
+
+Errors while parsing can be handled as follows
 
 ```cpp
-// text must be a non-const zero terminated char array.
-char text[] = R"___(
-    date = 26th of march 2017
-    [ImageData]
-    height = 1024
-    width = 1024
-)___";
-
-// Variables to store extracted data
-const char *date = nullptr;
-long long width = 0;
-long long height = 0;
-
-// Example INI parsing logic
 INI_BEGIN_TEXT(text)
-    INI_STRING(GLOBAL, date);
     INI_LONG(ImageData, width);
-    INI_LONG(ImageData, height);
+    INI_ERROR(code, line) {
+        printf("Error in ini file. Line %d \n", line);
+        if(code == INI_ERROR_CODE_UNEXPECTED_CHARACTER) {
+            printf("unexpected character %c\n", value);
+        }
+        if(code == INI_ERROR_CODE_UNEXPECTED_END) {
+            printf("premature end while parsing \n");
+        }
+        if(code == INI_ERROR_CODE_TYPE) {
+            printf("unexpected type \n");
+        }
+    }
 INI_END();
 ```
-
-## Important 
-Note that all `const char *` are pointer into the passed in `text` variable and their lifetime is bound to the lifetime of `text`.
