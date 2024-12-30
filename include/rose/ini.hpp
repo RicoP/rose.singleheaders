@@ -83,40 +83,59 @@ struct RIniParser {
 	}
 
     hash_t next() {
-        #define CHECK_UNEXPECTED_END(...)  do { if(c == 0) return UE; } while(0)
         hash_t hashLabel = 0;
+        char c;
 
         for(;;) {
             skip_ws();
 
-            char c = get();
-            if(c == 0) return EOF;
-            if(c == '\n') continue;
+            c = peek();
+            if(c == 0) {
+                return EOF;
+            }
+
+            c = get();
+            if(c == '\n') {
+                continue;
+            }
+            if(c == ';') {
+                skip_line();
+                continue;
+            }
 
             if(c == '[') {
                 hashSection = 0;
                 skip_ws();
                 while((c = get()) != ']') {
-                    CHECK_UNEXPECTED_END();
+                    if(c == 0) return UE;
+                    if(is_ws(c)) {
+                        skip_ws();
+                        if((c = get()) != ']') {
+                            return UC;
+                        }
+                        break;
+                    }
                     hashSection = shuffle(hashSection, to_lower(c));
                 }
                 continue;
             }
 
             // new Label
-            hashLabel = 0;
-            do {
-                CHECK_UNEXPECTED_END();
-                if(!is_ws(c)) {
-                    hashLabel = shuffle(hashLabel, to_lower(c));
-                }
-            } while((c = get()) != '=');
+            hashLabel = to_lower(c);
+            for(;;) {
+                c = get();
+                if(c == 0)   { --p;       return UE; }
+                if(c == '=') { --p;       break;     }
+                if(is_ws(c)) { skip_ws(); break;     }
+                hashLabel = shuffle(hashLabel, to_lower(c));
+            }
+
+            if((c = get()) != '=') return UC;
 
             // after [WS]*'='[WS]* comes the value
             skip_ws();
             return shuffle(hashSection, hashLabel);
         }
-        #undef CHECK_UNEXPECTED_END
     }
 
     unsigned read_number(char * buffer, unsigned maxsize) {
