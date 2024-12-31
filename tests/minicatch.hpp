@@ -13,9 +13,9 @@
 # define MC_LINUXNOEXCEPT noexcept
 #endif
 
-#define MC_CONCAT_(prefix, suffix) prefix##suffix
-#define MC_CONCAT(prefix, suffix) MC_CONCAT_(prefix, suffix)
-#define MC_MAKE_UNIQUE_NAME(prefix) MC_CONCAT(prefix##_, __LINE__)
+#define MC_MAKE_UNIQUE_NAME_CONCAT_IMPL(prefix, suffix) prefix##suffix
+#define MC_MAKE_UNIQUE_NAME_CONCAT(prefix, suffix) MC_MAKE_UNIQUE_NAME_CONCAT_IMPL(prefix, suffix)
+#define MC_MAKE_UNIQUE_NAME(prefix) MC_MAKE_UNIQUE_NAME_CONCAT(prefix##_, __LINE__)
 
 extern "C" MC_WIN32DLLIMPORT int printf ( const char * format, ... );
 
@@ -44,7 +44,8 @@ MiniCatch & minicatch() {
     return instance;
 }
 
-#define TEST_CASE(LABEL, SECTION) struct MC_MAKE_UNIQUE_NAME(TEST_CASE_) {\
+#define TEST_CASE(LABEL, SECTION) \
+struct MC_MAKE_UNIQUE_NAME(TEST_CASE_) { \
     static void runner(const char **, const char **, int *); \
     MC_MAKE_UNIQUE_NAME(TEST_CASE_) () { \
         minicatch().reg(LABEL, SECTION, MC_MAKE_UNIQUE_NAME(TEST_CASE_) ::runner); \
