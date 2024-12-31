@@ -43,8 +43,9 @@ double pixelsum = 0;
 
 // Example INI parsing logic
 INI_BEGIN_TEXT(text)
-    INI_STRING(GLOBAL, date);
-    INI_STRING(ImageData, image) {
+    INI_STRING(GLOBAL, date) date = value;
+    INI_STRING(ImageData, image)
+        image = value;
         if (char *last_slash = strrchr(pathBuffer, '/')) {
             // Replace after the last slash
             strcpy(last_slash + 1, image);
@@ -52,24 +53,24 @@ INI_BEGIN_TEXT(text)
             // No slash, replace the whole string
             strcpy(pathBuffer, image);
         }
-    }
-    INI_LONG(ImageData, width);
-    INI_LONG(ImageData, height);
-    INI_DOUBLE(ImageData, pixelsum);
+        puts(pathBuffer);
+    INI_LONG(ImageData, width) width = value;
+    INI_LONG(ImageData, height) height = value;
+    INI_DOUBLE(ImageData, pixelsum) pixelsum = value;
 INI_END();
 ```
 
 ### Explanation
-* INI_BEGIN_TEXT and INI_END define the scope of parsing.
+* INI_BEGIN_TEXT and INI_END must enclose all other macros.
 * INI_STRING, INI_LONG, and INI_DOUBLE are macros to extract specific keys (image, width, height, and pixelsum) under a section (ImageData) in the .ini file.
-    * INI_STRING will read the entire line until it sees a return character or the end of the file. It will skip over leading or trailing whiespaces. 
-    * INI_LONG will read a whole number.
-    * INI_DOUBLE will read a floating point number with double precission.
+    * `INI_LONG` will read a whole number.
+    * `INI_DOUBLE` will read a floating point number with double precission.
+    * `INI_STRING` will read the entire line until it sees a return character or the end of the file. It will skip over leading or trailing whiespaces.
 * The macro can end with a semicolon indicating the end ofr be wollowed up with a scope section `{...}` where the new value is handled in a specific way
 * When a ini file starts with values with no section they default in the `GLOBAL` section.
 
 ## Important
-Note that all `const char *` are pointer into the passed in `text` variable and their lifetime is bound to the lifetime of `text`.
+Note that `INI_STRING` will yield a `const char *` pointer pointing into the passed in `text` variable and it's lifetime is bound to the lifetime of `text`.
 
 ## Error handling
 
@@ -81,7 +82,7 @@ INI_BEGIN_TEXT(text)
     INI_ERROR(code, line) {
         printf("Error in ini file. Line %d \n", line);
         if(code == INI_ERROR_CODE_UNEXPECTED_CHARACTER) {
-            printf("unexpected character %c\n", value);
+            printf("unexpected character \n");
         }
         if(code == INI_ERROR_CODE_UNEXPECTED_END) {
             printf("premature end while parsing \n");
