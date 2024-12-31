@@ -31,7 +31,9 @@ enum {
     INI_ERROR_CODE_UNEXPECTED_CHARACTER,
     INI_ERROR_CODE_UNEXPECTED_END,
     INI_ERROR_CODE_TYPE,
-    INI_ERROR_CODE_NUM
+    INI_ERROR_CODE_NUM,
+
+    INI_CODE_NEW_SECTION //Not an error
 };
 
 struct RIniParser {
@@ -62,9 +64,10 @@ struct RIniParser {
     static constexpr bool is_ws(char c) { return c == ' ' || c == '\t' || c == '\r'; }
 
     char * buffer = nullptr;
-	hash_t hashSection = str_hash("GLOBAL");
+	hash_t section = str_hash("GLOBAL");
     int p = 0;
     int line = 1;
+    int section_index = 0;
 
     enum { OK = 0, EOF = INI_ERROR_CODE_EOF, UE = INI_ERROR_CODE_UNEXPECTED_END, UC = INI_ERROR_CODE_UNEXPECTED_CHARACTER };
 
@@ -115,7 +118,7 @@ struct RIniParser {
             }
 
             if(c == '[') {
-                hashSection = 0;
+                hash_t hashSection = 0;
                 skip_ws();
                 while((c = get()) != ']') {
                     if(c == 0) return UE;
@@ -128,7 +131,14 @@ struct RIniParser {
                     }
                     hashSection = shuffle(hashSection, to_lower(c));
                 }
-                continue;
+                if(hashSection != section) {
+                    section = hashSection;
+                    section_index = 0;
+                }
+                else {
+                    section_index++;
+                }
+                return section;
             }
 
             // new Label
@@ -145,7 +155,7 @@ struct RIniParser {
 
             // after [WS]*'='[WS]* comes the value
             skip_ws();
-            return shuffle(hashSection, hashLabel);
+            return shuffle(section, hashLabel);
         }
     }
 
@@ -217,6 +227,11 @@ struct RIniParser {
     break;} case RIniParser::shuffle(RIniParser::str_hash(#SECTION),RIniParser::str_hash(#LABEL)): \
     { \
     long long value = INI_STATE.readLong();
+
+#define INI_SECTION(SECTION) \
+    break;} case RIniParser::str_hash(#SECTION): \
+    { \
+    int value = INI_STATE.section_index;
 
 #define INI_ERROR(CODE, LINE) \
     break;} \
