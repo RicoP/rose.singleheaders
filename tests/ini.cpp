@@ -6,7 +6,7 @@
 TEST_CASE( "basics", "[ini.hpp]" ) {
     // text must be a non-const zero terminated char array.
     char text[] = R"___(
-        date = 26th of march 2017
+        date = 26th of March 2017
 
         [ImageData]
         image = splat1.dds
