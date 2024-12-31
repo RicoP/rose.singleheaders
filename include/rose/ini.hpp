@@ -26,6 +26,14 @@ extern "C" RINI_WIN32DLLIMPORT double RINI_WIN32CDECL atof (const char* str) RIN
 extern "C" RINI_WIN32DLLIMPORT long long int RINI_WIN32CDECL atoll ( const char * str ) RINI_LINUXNOEXCEPT;
 extern "C" RINI_WIN32DLLIMPORT int printf ( const char * format, ... );
 
+enum {
+    INI_ERROR_CODE_EOF = 0,
+    INI_ERROR_CODE_UNEXPECTED_CHARACTER,
+    INI_ERROR_CODE_UNEXPECTED_END,
+    INI_ERROR_CODE_TYPE,
+    INI_ERROR_CODE_NUM
+};
+
 struct RIniParser {
     typedef unsigned long long hash_t;
 
@@ -56,8 +64,9 @@ struct RIniParser {
     char * buffer = nullptr;
 	hash_t hashSection = str_hash("GLOBAL");
     int p = 0;
+    int line = 1;
 
-    enum { OK = 0, EOF = -1, UE = -2, UC = -3 };
+    enum { OK = 0, EOF = INI_ERROR_CODE_EOF, UE = INI_ERROR_CODE_UNEXPECTED_END, UC = INI_ERROR_CODE_UNEXPECTED_CHARACTER };
 
 
     static RIniParser FromString(char * string) {
@@ -77,9 +86,10 @@ struct RIniParser {
 
 	void skip_line() {
 		for(;;) {
-            if (buffer[p] == '\n' || buffer[p] == 0) return;
+            if (buffer[p] == '\n' || buffer[p] == 0) break;
             ++p;
 		}
+        ++line;
 	}
 
     hash_t next() {
@@ -96,6 +106,7 @@ struct RIniParser {
 
             c = get();
             if(c == '\n') {
+                ++line;
                 continue;
             }
             if(c == ';') {
@@ -181,6 +192,7 @@ struct RIniParser {
             end = p;
         }
         buffer[end] = 0;
+        ++line;
         return buffer + begin;
     }
 };
@@ -189,22 +201,34 @@ struct RIniParser {
     RIniParser INI_STATE = RIniParser::FromString(text); \
     for(;;) { \
     RIniParser::hash_t hash = INI_STATE.next(); \
-    switch(hash) {
+    switch(hash) { {
 
 #define INI_STRING(SECTION, LABEL) \
-    break; case RIniParser::shuffle(RIniParser::str_hash(#SECTION),RIniParser::str_hash(#LABEL)): \
-    LABEL = INI_STATE.readString();
+    break;} case RIniParser::shuffle(RIniParser::str_hash(#SECTION),RIniParser::str_hash(#LABEL)): \
+    { \
+    const char * value = INI_STATE.readString();
 
 #define INI_DOUBLE(SECTION, LABEL) \
-    break; case RIniParser::shuffle(RIniParser::str_hash(#SECTION),RIniParser::str_hash(#LABEL)): \
-    LABEL = INI_STATE.readDouble();
+    break;} case RIniParser::shuffle(RIniParser::str_hash(#SECTION),RIniParser::str_hash(#LABEL)): \
+    { \
+    double value = INI_STATE.readDouble();
 
 #define INI_LONG(SECTION, LABEL) \
-    break; case RIniParser::shuffle(RIniParser::str_hash(#SECTION),RIniParser::str_hash(#LABEL)): \
-    LABEL = INI_STATE.readLong();
+    break;} case RIniParser::shuffle(RIniParser::str_hash(#SECTION),RIniParser::str_hash(#LABEL)): \
+    { \
+    long long value = INI_STATE.readLong();
+
+#define INI_ERROR(CODE, LINE) \
+    break;} \
+    case INI_ERROR_CODE_UNEXPECTED_CHARACTER: \
+    case INI_ERROR_CODE_UNEXPECTED_END: \
+    case INI_ERROR_CODE_TYPE: \
+    { \
+    int CODE = (int)hash; \
+    int LINE = INI_STATE.line+1;
 
 #define INI_END(...) \
-    break; default: INI_STATE.skip_line(); } if(hash != -1) continue; else break; }
+    break;} default: INI_STATE.skip_line(); } if(hash >= INI_ERROR_CODE_EOF && hash < INI_ERROR_CODE_NUM) break; else continue; } \
 
 #undef RINI_WIN32CDECL
 #undef RINI_WIN32DLLIMPORT
