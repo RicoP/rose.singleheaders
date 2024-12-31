@@ -38,6 +38,9 @@ int main() {
     REQUIRE( height   == 1024 );
     REQUIRE( pixelsum == 269479.5 );
 
+    // TEST: negative test
+    REQUIRE( pixelsum == 269479 );
+
     puts("<ini.hpp test OK>");
     return 0;
 }
