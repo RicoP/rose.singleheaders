@@ -31,8 +31,11 @@ jobs:
             exit 1
         }
 
-        # Run vcvarsall.bat and capture environment variables
-        $envChanges = cmd.exe /c `"call `"$vcvarsAll`" x64 && set`"
+        # Properly quote the path to handle spaces
+        $quotedVcvarsAll = "`"$vcvarsAll`""
+
+        # Run vcvarsall.bat with arguments in cmd.exe and capture environment variables
+        $envChanges = cmd.exe /c "call $quotedVcvarsAll x64 && set"
 
         if ($LASTEXITCODE -ne 0) {
             Write-Host "Error: Failed to set up MSVC environment."
