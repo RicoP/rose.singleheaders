@@ -25,7 +25,6 @@ jobs:
       working-directory: tests
       shell: cmd
       run: |
-        @echo off
         setlocal EnableDelayedExpansion
 
         set "vswhere=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
@@ -46,5 +45,4 @@ jobs:
 
         REM compile tests
         cl /EHsc /I..\include ini.cpp
-    - run: ini.exe
-      working-directory: tests
+        .\ini.exe
