@@ -43,6 +43,17 @@ jobs:
             exit /b 1
         )
 
+        rem Export environment variables for future steps
+        rem Using setx to persist the environment variables
+        setx PATH "%PATH%" 
+        setx INCLUDE "%INCLUDE%" 
+        setx LIB "%LIB%" 
+        setx LIBPATH "%LIBPATH%"
+        setx VSINSTALLDIR "%VSINSTALLDIR%"
+        setx VSCMD_ARG_TGT_ARCH x64
+        setx VSCMD_ARG_HOST_ARCH x64
+        setx VSCMD_VER "2022"
+
     - name: Compile and Run Tests on Windows
       working-directory: tests
       shell: cmd
