@@ -21,9 +21,35 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: microsoft/setup-msbuild@v2
+    - name: Setup CL
+      run: |
+        setlocal EnableDelayedExpansion
+
+        :: Check where is MSVC and put it into the path
+        where cl >nul 2>&1
+        if %errorlevel%==0 (
+            goto POST_WHERE_IS_MSVC
+        )
+
+        set "vswhere=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+        set "install_path="
+
+        for /f "usebackq tokens=*" %%i in (`"!vswhere!" -latest -prerelease -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do (
+            set "install_path=%%i"
+        )
+
+        if defined install_path (
+            echo Setting up compile environment...
+            call "!install_path!\VC\Auxiliary\Build\vcvarsall.bat" x64
+        ) else (
+            echo Error: MSVC build tools not found.
+            echo Please install Visual Studio Community
+            exit /b 1
+        )      
     - name: Compile and Run Tests on Windows
       working-directory: tests
       shell: cmd
       run: |
         cl /EHsc /I..\include ini.cpp
-        ini.exe
+    - run: ini.exe
+      working-directory: tests
