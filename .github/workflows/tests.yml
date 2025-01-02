@@ -21,7 +21,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: microsoft/setup-msbuild@v2
-    - name: Setup CL
+    - name: Compile and Run Tests on Windows
+      working-directory: tests
       shell: cmd
       run: |
         @echo off
@@ -43,21 +44,7 @@ jobs:
             exit /b 1
         )
 
-        rem Export environment variables for future steps
-        rem Using setx to persist the environment variables
-        setx PATH "%PATH%" 
-        setx INCLUDE "%INCLUDE%" 
-        setx LIB "%LIB%" 
-        setx LIBPATH "%LIBPATH%"
-        setx VSINSTALLDIR "%VSINSTALLDIR%"
-        setx VSCMD_ARG_TGT_ARCH x64
-        setx VSCMD_ARG_HOST_ARCH x64
-        setx VSCMD_VER "2022"
-
-    - name: Compile and Run Tests on Windows
-      working-directory: tests
-      shell: cmd
-      run: |
+        REM compile tests
         cl /EHsc /I..\include ini.cpp
     - run: ini.exe
       working-directory: tests
