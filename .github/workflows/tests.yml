@@ -22,46 +22,26 @@ jobs:
     - uses: actions/checkout@v4
     - uses: microsoft/setup-msbuild@v2
     - name: Setup CL
+      shell: cmd
       run: |
-        # Path to vcvarsall.bat
-        $vcvarsAll = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat"
+        @echo off
+        setlocal EnableDelayedExpansion
 
-        if (-Not (Test-Path $vcvarsAll)) {
-            Write-Host "Error: vcvarsall.bat not found at $vcvarsAll"
-            exit 1
-        }
+        set "vswhere=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+        set "install_path="
 
-        # Properly quote the path to handle spaces
-        $quotedVcvarsAll = "`"$vcvarsAll`""
+        for /f "usebackq tokens=*" %%i in (`"!vswhere!" -latest -prerelease -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do (
+            set "install_path=%%i"
+        )
 
-        # Run vcvarsall.bat with arguments in cmd.exe and capture environment variables
-        $envChanges = cmd.exe /c "call $quotedVcvarsAll x64 && set"
-
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Error: Failed to set up MSVC environment."
-            exit 1
-        }
-
-        # Apply the environment changes to the current PowerShell session
-        $envChanges -split "`r`n" | ForEach-Object {
-            $parts = $_ -split "=", 2
-            if ($parts.Count -eq 2) {
-                $key = $parts[0].Trim()
-                $value = $parts[1].Trim()
-                Set-Item -Path "Env:$key" -Value $value
-            }
-        }
-
-        Write-Host "MSVC environment successfully set up."
-
-        # Print the location of cl.exe
-        $clLocation = Get-Command "cl.exe" -ErrorAction SilentlyContinue
-
-        if ($clLocation) {
-            Write-Host "CL.exe location: $($clLocation.Source)"
-        } else {
-            Write-Host "Error: cl.exe not found in the current environment."
-        }        
+        if defined install_path (
+            echo Setting up compile environment...
+            call "!install_path!\VC\Auxiliary\Build\vcvarsall.bat" x64
+        ) else (
+            echo Error: MSVC build tools not found.
+            echo Please install Visual Studio Community
+            exit /b 1
+        )
 
     - name: Compile and Run Tests on Windows
       working-directory: tests
