@@ -23,58 +23,34 @@ jobs:
     - uses: microsoft/setup-msbuild@v2
     - name: Setup CL
       run: |
-        # Enable script error handling
-        $ErrorActionPreference = "Stop"
-
-        # Function to check if 'cl.exe' exists in the PATH
-        function Test-MSVC {
-            $clPath = Get-Command "cl.exe" -ErrorAction SilentlyContinue
-            return $clPath -ne $null
-        }
-
-        # Main logic
-        if (Test-MSVC) {
-            Write-Host "MSVC is already set up in the PATH."
-            # If MSVC is found, you can perform additional steps here if necessary.
-            return
-        }
-
-        # Path to 'vswhere.exe'
-        $vswhere = Join-Path -Path ${env:ProgramFiles(x86)} -ChildPath "Microsoft Visual Studio\Installer\vswhere.exe"
-
-        if (-Not (Test-Path $vswhere)) {
-            Write-Host "Error: vswhere.exe not found at $vswhere"
-            Write-Host "Please ensure Visual Studio Community is installed."
-            exit 1
-        }
-
-        # Find the installation path using vswhere
-        $installPath = & $vswhere -latest -prerelease -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-
-        if (-Not $installPath) {
-            Write-Host "Error: MSVC build tools not found."
-            Write-Host "Please install Visual Studio Community."
-            exit 1
-        }
-
-        # Set up the MSVC environment
-        Write-Host "Setting up compile environment..."
-        $vcvarsAll = Join-Path -Path $installPath -ChildPath "VC\Auxiliary\Build\vcvarsall.bat"
+        # Path to vcvarsall.bat
+        $vcvarsAll = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat"
 
         if (-Not (Test-Path $vcvarsAll)) {
             Write-Host "Error: vcvarsall.bat not found at $vcvarsAll"
             exit 1
         }
 
-        # Call the vcvarsall.bat file with the x64 argument
-        & cmd.exe /c `"$vcvarsAll x64`"
+        # Run vcvarsall.bat and capture environment variables
+        $envChanges = cmd.exe /c `"call `"$vcvarsAll`" x64 && set`"
 
         if ($LASTEXITCODE -ne 0) {
             Write-Host "Error: Failed to set up MSVC environment."
             exit 1
         }
 
-        Write-Host "MSVC environment successfully set up." 
+        # Apply the environment changes to the current PowerShell session
+        $envChanges -split "`r`n" | ForEach-Object {
+            $parts = $_ -split "="
+            if ($parts.Count -eq 2) {
+                $key = $parts[0].Trim()
+                $value = $parts[1].Trim()
+                $env:$key = $value
+            }
+        }
+
+        Write-Host "MSVC environment successfully set up."
+        
     - name: Compile and Run Tests on Windows
       working-directory: tests
       shell: cmd
