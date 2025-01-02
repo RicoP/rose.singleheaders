@@ -24,7 +24,7 @@ jobs:
     - name: Setup CL
       run: |
         # Path to vcvarsall.bat
-        $vcvarsAll = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat"
+        $vcvarsAll = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat"
 
         if (-Not (Test-Path $vcvarsAll)) {
             Write-Host "Error: vcvarsall.bat not found at $vcvarsAll"
