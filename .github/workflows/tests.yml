@@ -41,16 +41,16 @@ jobs:
 
         # Apply the environment changes to the current PowerShell session
         $envChanges -split "`r`n" | ForEach-Object {
-            $parts = $_ -split "="
+            $parts = $_ -split "=", 2
             if ($parts.Count -eq 2) {
                 $key = $parts[0].Trim()
                 $value = $parts[1].Trim()
-                $env:$key = $value
+                Set-Item -Path "Env:$key" -Value $value
             }
         }
 
         Write-Host "MSVC environment successfully set up."
-        
+
     - name: Compile and Run Tests on Windows
       working-directory: tests
       shell: cmd
