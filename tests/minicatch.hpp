@@ -1,23 +1,12 @@
 #pragma once
 
 #include <vector>
-
-
-#ifdef _WIN32
-# define MC_WIN32CDECL __cdecl
-# define MC_WIN32DLLIMPORT __declspec(dllimport)
-# define MC_LINUXNOEXCEPT
-#else
-# define MC_WIN32CDECL
-# define MC_WIN32DLLIMPORT
-# define MC_LINUXNOEXCEPT noexcept
-#endif
+#include <stdio.h> // printf
 
 #define MC_MAKE_UNIQUE_NAME_CONCAT_IMPL(prefix, suffix) prefix##suffix
 #define MC_MAKE_UNIQUE_NAME_CONCAT(prefix, suffix) MC_MAKE_UNIQUE_NAME_CONCAT_IMPL(prefix, suffix)
 #define MC_MAKE_UNIQUE_NAME(prefix) MC_MAKE_UNIQUE_NAME_CONCAT(prefix##_, __LINE__)
 
-extern "C" MC_WIN32DLLIMPORT int printf ( const char * format, ... );
 
 struct MiniCatchCase {
     typedef void (*FPTestCase)(const char **, const char **, int *);

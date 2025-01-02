@@ -1,14 +1,7 @@
 #pragma once
 
-#ifdef _WIN32
-# define RINI_WIN32CDECL __cdecl
-# define RINI_WIN32DLLIMPORT __declspec(dllimport)
-# define RINI_LINUXNOEXCEPT
-#else
-# define RINI_WIN32CDECL
-# define RINI_WIN32DLLIMPORT
-# define RINI_LINUXNOEXCEPT noexcept
-#endif
+#include <stdio.h> // printf
+#include <math.h> //atof atoll
 
 #if defined(_WIN32) && defined(_MSVC_LANG)
 # define RINI_CPLUSPLUS _MSVC_LANG
@@ -21,10 +14,6 @@
 #else
 # define RINI_FALLTHROUGH (void)(0)
 #endif
-
-extern "C" RINI_WIN32DLLIMPORT double RINI_WIN32CDECL atof (const char* str) RINI_LINUXNOEXCEPT;
-extern "C" RINI_WIN32DLLIMPORT long long int RINI_WIN32CDECL atoll ( const char * str ) RINI_LINUXNOEXCEPT;
-extern "C" RINI_WIN32DLLIMPORT int printf ( const char * format, ... );
 
 enum {
     INI_ERROR_CODE_EOF = 0,
@@ -69,9 +58,6 @@ struct RIniParser {
     int line = 1;
     int section_index = 0;
 
-    enum { OK = 0, EOF = INI_ERROR_CODE_EOF, UE = INI_ERROR_CODE_UNEXPECTED_END, UC = INI_ERROR_CODE_UNEXPECTED_CHARACTER };
-
-
     static RIniParser FromString(char * string) {
         RIniParser value;
         value.buffer = string;
@@ -104,7 +90,7 @@ struct RIniParser {
 
             c = peek();
             if(c == 0) {
-                return EOF;
+                return INI_ERROR_CODE_EOF;
             }
 
             c = get();
@@ -121,11 +107,11 @@ struct RIniParser {
                 hash_t hashSection = 0;
                 skip_ws();
                 while((c = get()) != ']') {
-                    if(c == 0) return UE;
+                    if(c == 0) return INI_ERROR_CODE_UNEXPECTED_END;
                     if(is_ws(c)) {
                         skip_ws();
                         if((c = get()) != ']') {
-                            return UC;
+                            return INI_ERROR_CODE_UNEXPECTED_CHARACTER;
                         }
                         break;
                     }
@@ -145,13 +131,13 @@ struct RIniParser {
             hashLabel = to_lower(c);
             for(;;) {
                 c = get();
-                if(c == 0)   { --p;       return UE; }
+                if(c == 0)   { --p;       return INI_ERROR_CODE_UNEXPECTED_END; }
                 if(c == '=') { --p;       break;     }
                 if(is_ws(c)) { skip_ws(); break;     }
                 hashLabel = shuffle(hashLabel, to_lower(c));
             }
 
-            if((c = get()) != '=') return UC;
+            if((c = get()) != '=') return INI_ERROR_CODE_UNEXPECTED_CHARACTER;
 
             // after [WS]*'='[WS]* comes the value
             skip_ws();
