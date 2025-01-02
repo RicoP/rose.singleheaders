@@ -7,9 +7,8 @@ on:
     branches: [ "main" ]
 
 jobs:
-  run_tests:
+  Linux:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
     - name: Compile and Run Tests
@@ -17,3 +16,17 @@ jobs:
       run: |
         g++ -I../include ini.cpp && ./a.out
         
+  Windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Visual Studio Environment
+      shell: cmd
+      run: |
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+    - name: Compile and Run Tests on Windows
+      working-directory: tests
+      shell: cmd
+      run: |
+        cl /I..\include ini.cpp
+        ini.exe
