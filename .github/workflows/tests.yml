@@ -20,10 +20,9 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Visual Studio Environment
-      shell: cmd
-      run: |
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
+    - uses: TheMrMilchmann/setup-msvc-dev@v3
+      with:
+        arch: x64
     - name: Compile and Run Tests on Windows
       working-directory: tests
       shell: cmd
