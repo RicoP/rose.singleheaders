@@ -23,29 +23,58 @@ jobs:
     - uses: microsoft/setup-msbuild@v2
     - name: Setup CL
       run: |
-        setlocal EnableDelayedExpansion
+        # Enable script error handling
+        $ErrorActionPreference = "Stop"
 
-        :: Check where is MSVC and put it into the path
-        where cl >nul 2>&1
-        if %errorlevel%==0 (
-            goto POST_WHERE_IS_MSVC
-        )
+        # Function to check if 'cl.exe' exists in the PATH
+        function Test-MSVC {
+            $clPath = Get-Command "cl.exe" -ErrorAction SilentlyContinue
+            return $clPath -ne $null
+        }
 
-        set "vswhere=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
-        set "install_path="
+        # Main logic
+        if (Test-MSVC) {
+            Write-Host "MSVC is already set up in the PATH."
+            # If MSVC is found, you can perform additional steps here if necessary.
+            return
+        }
 
-        for /f "usebackq tokens=*" %%i in (`"!vswhere!" -latest -prerelease -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do (
-            set "install_path=%%i"
-        )
+        # Path to 'vswhere.exe'
+        $vswhere = Join-Path -Path ${env:ProgramFiles(x86)} -ChildPath "Microsoft Visual Studio\Installer\vswhere.exe"
 
-        if defined install_path (
-            echo Setting up compile environment...
-            call "!install_path!\VC\Auxiliary\Build\vcvarsall.bat" x64
-        ) else (
-            echo Error: MSVC build tools not found.
-            echo Please install Visual Studio Community
-            exit /b 1
-        )      
+        if (-Not (Test-Path $vswhere)) {
+            Write-Host "Error: vswhere.exe not found at $vswhere"
+            Write-Host "Please ensure Visual Studio Community is installed."
+            exit 1
+        }
+
+        # Find the installation path using vswhere
+        $installPath = & $vswhere -latest -prerelease -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+
+        if (-Not $installPath) {
+            Write-Host "Error: MSVC build tools not found."
+            Write-Host "Please install Visual Studio Community."
+            exit 1
+        }
+
+        # Set up the MSVC environment
+        Write-Host "Setting up compile environment..."
+        $vcvarsAll = Join-Path -Path $installPath -ChildPath "VC\Auxiliary\Build\vcvarsall.bat"
+
+        if (-Not (Test-Path $vcvarsAll)) {
+            Write-Host "Error: vcvarsall.bat not found at $vcvarsAll"
+            exit 1
+        }
+
+        # Call the vcvarsall.bat file with the x64 argument
+        & cmd.exe /c `"$vcvarsAll x64`"
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Error: Failed to set up MSVC environment."
+            exit 1
+        }
+
+        Write-Host "MSVC environment successfully set up." 
     - name: Compile and Run Tests on Windows
       working-directory: tests
       shell: cmd
