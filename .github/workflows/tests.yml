@@ -20,9 +20,7 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: TheMrMilchmann/setup-msvc-dev@v3
-      with:
-        arch: x64
+    - uses: microsoft/setup-msbuild@v2
     - name: Compile and Run Tests on Windows
       working-directory: tests
       shell: cmd
