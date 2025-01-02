@@ -54,6 +54,15 @@ jobs:
 
         Write-Host "MSVC environment successfully set up."
 
+        # Print the location of cl.exe
+        $clLocation = Get-Command "cl.exe" -ErrorAction SilentlyContinue
+
+        if ($clLocation) {
+            Write-Host "CL.exe location: $($clLocation.Source)"
+        } else {
+            Write-Host "Error: cl.exe not found in the current environment."
+        }        
+
     - name: Compile and Run Tests on Windows
       working-directory: tests
       shell: cmd
