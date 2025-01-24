@@ -202,22 +202,26 @@ struct RIniParser {
 #define INI_STRING(SECTION, LABEL) \
     break;} case RIniParser::shuffle(RIniParser::str_hash(#SECTION),RIniParser::str_hash(#LABEL)): \
     { \
-    const char * value = INI_STATE.readString();
+    const char * value = INI_STATE.readString(); \
+    (void)(value);
 
 #define INI_DOUBLE(SECTION, LABEL) \
     break;} case RIniParser::shuffle(RIniParser::str_hash(#SECTION),RIniParser::str_hash(#LABEL)): \
     { \
-    double value = INI_STATE.readDouble();
+    double value = INI_STATE.readDouble(); \
+    (void)(value);
 
 #define INI_LONG(SECTION, LABEL) \
     break;} case RIniParser::shuffle(RIniParser::str_hash(#SECTION),RIniParser::str_hash(#LABEL)): \
     { \
-    long long value = INI_STATE.readLong();
+    long long value = INI_STATE.readLong(); \
+    (void)(value);
 
 #define INI_SECTION(SECTION) \
     break;} case RIniParser::str_hash(#SECTION): \
     { \
-    int value = INI_STATE.section_index;
+    int value = INI_STATE.section_index; \
+    (void)(value);
 
 #define INI_ERROR(CODE, LINE) \
     break;} \
@@ -226,7 +230,9 @@ struct RIniParser {
     case INI_ERROR_CODE_TYPE: \
     { \
     int CODE = (int)hash; \
-    int LINE = INI_STATE.line+1;
+    int LINE = INI_STATE.line+1; \
+    (void)(CODE); \
+    (void)(LINE);
 
 #define INI_END(...) \
     break;} default: INI_STATE.skip_line(); } if(hash >= INI_ERROR_CODE_EOF && hash < INI_ERROR_CODE_NUM) break; else continue; } \
