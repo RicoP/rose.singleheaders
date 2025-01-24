@@ -64,6 +64,6 @@ typedef void (*RCppParserCallback)(RCpp &, RCppScopeGlobal &/*, ...*/);
 typedef void (*RCppParserStructCallback)(RCpp &, RCppScopeStruct &/*, ...*/);
 typedef void (*RCppParserStructBodyCallback)(RCpp &, RCppScopeStructBody &/*, ...*/);
 
-void rose_cpp_parse(RCpp &, RCppParserCallback);
-int  rose_cpp_parse_struct(RCpp &, RCppParserStructCallback);
-int  rose_cpp_parse_struct_body(RCpp &, RCppParserStructBodyCallback);
+void rose_cpp_parse(RCpp &, RCppParserCallback) {}
+int  rose_cpp_parse_struct(RCpp &, RCppParserStructCallback) { return 1; }
+int  rose_cpp_parse_struct_body(RCpp &, RCppParserStructBodyCallback) { return 1; }
