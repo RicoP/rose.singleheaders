@@ -28,6 +28,7 @@ jobs:
       working-directory: tests
       shell: cmd
       run: |
+        setlocal EnableExtensions EnableDelayedExpansion
         cl /EHsc /I..\include ini.cpp
         ini.exe
         cl /EHsc /I..\include cpp.cpp
