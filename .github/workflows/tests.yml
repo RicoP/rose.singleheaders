@@ -16,6 +16,7 @@ jobs:
       run: |
         g++ -I../include ini.cpp && ./a.out
         g++ -I../include cpp.cpp && ./a.out
+        echo "<All Good>"
 
   Windows:
     runs-on: windows-latest
@@ -33,3 +34,4 @@ jobs:
         ini.exe
         cl /EHsc /I..\include cpp.cpp
         cpp.exe
+        echo "<All Good>"
