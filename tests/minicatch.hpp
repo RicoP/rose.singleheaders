@@ -67,8 +67,8 @@ int main() {
         }
         printf("OK \n");
     }
-    if(returnvalue == 0) { printf("\n\n<All good>\n"); }
-    else                 { printf("\n\n<Errors>\n"); }
+    if(returnvalue == 0) { }
+    else                 { printf("\n\n<Errors>\n\n"); }
 
     return returnvalue;
 }
