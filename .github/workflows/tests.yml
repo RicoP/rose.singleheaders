@@ -30,8 +30,8 @@ jobs:
       shell: cmd
       run: |
         setlocal EnableExtensions EnableDelayedExpansion
-        cl /EHsc /I..\include ini.cpp
+        cl /EHsc /nologo /I..\include ini.cpp
         ini.exe
-        cl /EHsc /I..\include cpp.cpp
+        cl /EHsc /nologo /I..\include cpp.cpp
         cpp.exe
         echo "<All Good>"
