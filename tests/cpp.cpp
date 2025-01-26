@@ -6,11 +6,13 @@ const char ** pcondition;
 const char ** pfile;
 int * pline;
 
-void check(bool cond) {
+void _check(bool cond, const char * str) {
     if(cond) return;
-    puts("error");
+    printf("\nERROR: [%s]\n", str);
     exit(1);
 }
+
+#define check(X) _check(X, STR(X))
 
 TEST_CASE( "parse simpel struct", "[cpp.hpp]" ) {
     char text[] = R"___(
@@ -24,11 +26,6 @@ TEST_CASE( "parse simpel struct", "[cpp.hpp]" ) {
                 RCppStruct * Struct = Scope.Struct;
                 check(Struct->name == "S");
             }
-            break; case RCppScope::Type::Global: {
-            }
-            break; default:
-                printf("You shouldn't be here \n");
-                check(0);
         }
         return 0;
     });
@@ -46,12 +43,69 @@ TEST_CASE( "parse simpel struct {}", "[cpp.hpp]" ) {
                 RCppStruct * Struct = Scope.Struct;
                 check(Struct->name == "S");
             }
-            break; case RCppScope::Type::Global: {
-            }
-            break; default:
-                printf("You shouldn't be here \n");
-                check(0);
         }
         return 0;
     });
+}
+
+
+TEST_CASE( "parse simpel struct with vars", "[cpp.hpp]" ) {
+    char text[] = R"___(
+        struct S { int x,y; };
+    )___";
+    int count = 0;
+    RCpp cpp(text);
+    cpp.user = &count;
+
+    cpp.parse([](RCpp & cpp, RCppScope & Scope) {
+        int * count = (int*)cpp.user;
+        switch(Scope.Type) {
+            break; case RCppScope::Type::VariableDeclaration: {
+                check(Scope.Parent->Type == RCppScope::Type::Struct);
+                check(Scope.Parent->Struct->name == "S");
+
+                RCppVariableDeclaration * VarDecl = Scope.VariableDeclaration;
+                check(VarDecl->type == "int");
+                check(VarDecl->name == "x" || VarDecl->name == "y");
+                (*count)++;
+            }
+        }
+        return 0;
+    });
+
+    REQUIRE(count == 2);
+}
+
+
+TEST_CASE( "parse simpel struct with vars and instance", "[cpp.hpp]" ) {
+    char text[] = R"___(
+        struct S { int x,y; } s;
+    )___";
+    int count = 0;
+    RCpp cpp(text);
+    cpp.user = &count;
+
+    cpp.parse([](RCpp & cpp, RCppScope & Scope) {
+        int * count = (int*)cpp.user;
+        switch(Scope.Type) {
+            break; case RCppScope::Type::VariableDeclaration: {
+                if(Scope.Parent->Type == RCppScope::Type::Struct) {
+                    check(Scope.Parent->Struct->name == "S");
+
+                    RCppVariableDeclaration * VarDecl = Scope.VariableDeclaration;
+                    check(VarDecl->type != "int" || (VarDecl->name == "x" || VarDecl->name == "y"));
+                }
+                else if(Scope.Parent->Type == RCppScope::Type::Global) {
+                    RCppVariableDeclaration * VarDecl = Scope.VariableDeclaration;
+                    check(VarDecl->type != "S" || (VarDecl->name == "s"));
+                } else {
+                    check(0);
+                }
+                (*count)++;
+            }
+        }
+        return 0;
+    });
+
+    REQUIRE(count == 3);
 }

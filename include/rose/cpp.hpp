@@ -29,19 +29,23 @@ struct RCppSpan {
     }
 
     char operator*() { return get(); }
-    bool operator==(const char * rhs) { return compare(rhs); }
+    bool operator==(const char * rhs) { return  compare(rhs); }
+    bool operator!=(const char * rhs) { return !compare(rhs); }
+    operator bool() { return length() != 0; }
 };
 
 struct RCppScope {
-    struct RCppScope * Parent;
     enum class Type {
         None = 0,
         Global,
-        Struct
-    } Type;
+        Struct,
+        VariableDeclaration
+    } Type = Type::None;
+    struct RCppScope * Parent = nullptr;
     union {
         struct RCppGlobal * Global;
         struct RCppStruct * Struct;
+        struct RCppVariableDeclaration * VariableDeclaration;
     };
 };
 
@@ -59,7 +63,7 @@ struct RCpp {
     RCpp(const RCpp &) = delete;
 
     void debug_print_state() {
-        printf("(i: %d) -> %.5s\n", i, p+i);
+        printf("(i: %d) -> [%.5s]\n", i, p+i);
     }
 
 private:
@@ -103,10 +107,7 @@ public:
 
     bool symbol_peek(char symbol) {
         skip_ws();
-        if(p[i] == symbol) {
-            return true;
-        }
-        return false;
+        return p[i] == symbol;
     }
 
     bool symbol_skip(char symbol) {
@@ -127,14 +128,6 @@ public:
     int parse_body(RCppScope &, RCppParserCallback);
 };
 
-struct RCppScopeGlobal {
-    void * user = nullptr;
-    enum class Type {
-        NONE = 0,
-        Struct
-    } type;
-};
-
 struct RCppGlobal {
     void * user = nullptr;
 };
@@ -145,23 +138,29 @@ struct RCppStruct {
     bool is_class;
 };
 
-/*
-struct RCppScopeVariable {
+struct RCppVariableDeclaration {
+    void * user = nullptr;
     RCppSpan type;
     RCppSpan name;
 };
-*/
 
 int RCpp::parse(RCppParserCallback callback) {
     RCppGlobal Global { user };
-    RCppScope Scope { nullptr, RCppScope::Type::Global };
+    RCppScope Scope { RCppScope::Type::Global, nullptr };
     Scope.Global = &Global;
     return parse_body(Scope, callback);
 }
 
 int RCpp::parse_body(RCppScope & Scope, RCppParserCallback callback) {
     // TODO: handle errors
-    #define assume(X) (X)
+    #define STR2(X) #X
+    #define STR(X) STR2(X)
+    #define assume(X) \
+        do { if(X) break; \
+            printf("ERROR [" STR(X) "] line %d \n", __LINE__); \
+            debug_print_state(); \
+            exit(1); \
+        } while(0)
 
     int n = 0;
     state = 0;
@@ -171,7 +170,7 @@ int RCpp::parse_body(RCppScope & Scope, RCppParserCallback callback) {
         skip_ws();
 
         if(p[i] == 0)   return n;
-        if(p[i] == '}') return n;
+        if(symbol_skip('}')) return n;
 
         bool is_struct = false;
         bool is_class  = false;
@@ -182,10 +181,8 @@ int RCpp::parse_body(RCppScope & Scope, RCppParserCallback callback) {
             Struct.is_class = is_class;
             Struct.name = keyword_read();
 
-            RCppScope StructScope;
+            RCppScope StructScope { RCppScope::Type::Struct, &Scope };
             StructScope.Struct = &Struct;
-            StructScope.Type = RCppScope::Type::Struct;
-            StructScope.Parent = &Scope;
             if(symbol_skip('{')) {
                 parse_body(StructScope, callback);
             }
@@ -193,16 +190,28 @@ int RCpp::parse_body(RCppScope & Scope, RCppParserCallback callback) {
                 callback(*this, StructScope);
             }
 
-            assume(symbol_skip(';'));
+            if(RCppSpan name = keyword_read()) {
+                RCppSpan type = Struct.name;
+                RCppVariableDeclaration VarDecl { user, type, name };
+                RCppScope DeclScope { RCppScope::Type::VariableDeclaration, &Scope };
+                DeclScope.VariableDeclaration = &VarDecl;
+                callback(*this, DeclScope);
+            }
 
+            assume(symbol_skip(';'));
             //RCppScopeGlobal global;
             //callback(*this, global);
+            continue;
         }
-        /*
         RCppSpan type = keyword_read();
-        RCppSpan name = keyword_read();
-        callback()
-        */
+        do {
+            RCppSpan name = keyword_read();
+            RCppVariableDeclaration VarDecl { user, type, name };
+            RCppScope DeclScope { RCppScope::Type::VariableDeclaration, &Scope };
+            DeclScope.VariableDeclaration = &VarDecl;
+            callback(*this, DeclScope);
+        } while(symbol_skip(','));
+        assume(symbol_skip(';'));
     }
 
     #undef assume
