@@ -3,10 +3,6 @@
 // TODO: implement
 #define check(X) (void)(X)
 
-typedef void (*RCppParserCallback)(struct RCpp &, struct RCppScopeGlobal &/*, ...*/);
-typedef void (*RCppParserStructCallback)(struct RCpp &, struct RCppScopeStruct &/*, ...*/);
-typedef void (*RCppParserStructBodyCallback)(struct RCpp &, struct RCppScopeStructBody &/*, ...*/);
-
 struct RCppSpan {
     const char * p;
     int begin;
@@ -20,8 +16,6 @@ struct RCppSpan {
 
     char get() { return p[begin]; }
 
-    char operator*() { return get(); }
-
     bool compare(const char * rhs) {
         const char * lhs = p + begin;
         const char * lhs_end = p + end;
@@ -33,8 +27,25 @@ struct RCppSpan {
             rhs++;
         }
     }
+
+    char operator*() { return get(); }
+    bool operator==(const char * rhs) { return compare(rhs); }
 };
 
+struct RCppScope {
+    struct RCppScope * Parent;
+    enum class Type {
+        None = 0,
+        Global,
+        Struct
+    } Type;
+    union {
+        struct RCppGlobal * Global;
+        struct RCppStruct * Struct;
+    };
+};
+
+typedef int (*RCppParserCallback)(struct RCpp &, struct RCppScope &/*, ...*/);
 
 struct RCpp {
     // variables
@@ -47,11 +58,9 @@ struct RCpp {
     RCpp(char * text) : p(text) {};
     RCpp(const RCpp &) = delete;
 
-
     void debug_print_state() {
         printf("(i: %d) -> %.5s\n", i, p+i);
     }
-
 
 private:
     bool is_number(char c)     { return c >= '0' && c <= '9'; }
@@ -92,16 +101,30 @@ public:
         return keyword;
     }
 
-    bool symbol_skip(char symbol) {
+    bool symbol_peek(char symbol) {
         skip_ws();
         if(p[i] == symbol) {
+            return true;
+        }
+        return false;
+    }
+
+    bool symbol_skip(char symbol) {
+        if(symbol_peek(symbol)) {
             i++;
             return true;
         }
         return false;
     }
 
-    void parse(RCppParserCallback callback);
+    void error(const char * message) {
+        //TODO: implement me properly
+        printf("ERROR %s \n", message);
+        exit(1);
+    }
+
+    int parse(RCppParserCallback);
+    int parse_body(RCppScope &, RCppParserCallback);
 };
 
 struct RCppScopeGlobal {
@@ -112,30 +135,31 @@ struct RCppScopeGlobal {
     } type;
 };
 
-struct RCppScopeStruct {
+struct RCppGlobal {
+    void * user = nullptr;
+};
+
+struct RCppStruct {
     void * user = nullptr;
     RCppSpan name;
     bool is_class;
 };
 
+/*
 struct RCppScopeVariable {
     RCppSpan type;
     RCppSpan name;
 };
+*/
 
-struct RCppScopeStructBody {
-    void * user = nullptr;
-    enum class Type {
-        NONE = 0,
-        Variable
-    } type;
+int RCpp::parse(RCppParserCallback callback) {
+    RCppGlobal Global { user };
+    RCppScope Scope { nullptr, RCppScope::Type::Global };
+    Scope.Global = &Global;
+    return parse_body(Scope, callback);
+}
 
-    union {
-        RCppScopeVariable Variable;
-    };
-};
-
-void RCpp::parse(RCppParserCallback callback) {
+int RCpp::parse_body(RCppScope & Scope, RCppParserCallback callback) {
     // TODO: handle errors
     #define assume(X) (X)
 
@@ -146,26 +170,42 @@ void RCpp::parse(RCppParserCallback callback) {
     for(;;) {
         skip_ws();
 
-        if(p[i] == 0) return;
+        if(p[i] == 0)   return n;
+        if(p[i] == '}') return n;
 
         bool is_struct = false;
         bool is_class  = false;
         if((is_struct = keyword_skip("struct")) || (is_class = keyword_skip("class"))) {
+            n++;
             check(is_struct != is_class);
-            RCppScopeStruct Struct { user };
+            RCppStruct Struct { user };
             Struct.is_class = is_class;
             Struct.name = keyword_read();
+
+            RCppScope StructScope;
+            StructScope.Struct = &Struct;
+            StructScope.Type = RCppScope::Type::Struct;
+            StructScope.Parent = &Scope;
+            if(symbol_skip('{')) {
+                parse_body(StructScope, callback);
+            }
+            else {
+                callback(*this, StructScope);
+            }
 
             assume(symbol_skip(';'));
 
             //RCppScopeGlobal global;
             //callback(*this, global);
         }
+        /*
+        RCppSpan type = keyword_read();
+        RCppSpan name = keyword_read();
+        callback()
+        */
     }
 
     #undef assume
 }
-int  rose_cpp_parse_struct(RCpp &, RCppParserStructCallback) { return 1; }
-int  rose_cpp_parse_struct_body(RCpp &, RCppParserStructBodyCallback) { return 1; }
 
 #undef check

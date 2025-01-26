@@ -12,29 +12,56 @@ void check(bool cond) {
     exit(1);
 }
 
-TEST_CASE( "basics1", "[cpp.hpp]" ) {
+TEST_CASE( "parse simpel struct", "[cpp.hpp]" ) {
     char text[] = R"___(
         struct S;
     )___";
     RCpp cpp(text);
 
-    cpp.parse([](RCpp & cpp, RCppScopeGlobal & Global) {
-        switch(Global.type) {
-            break; case RCppScopeGlobal::Type::Struct: {
-                int n = rose_cpp_parse_struct(cpp, +[](RCpp & cpp, RCppScopeStruct & Struct) {
-                    check(Struct.name.compare("S"));
+    cpp.parse([](RCpp & cpp, RCppScope & Scope) {
+        switch(Scope.Type) {
+            break; case RCppScope::Type::Struct: {
+                RCppStruct * Struct = Scope.Struct;
+                check(Struct->name == "S");
+                /*
+                int n = rose_cpp_parse_struct(cpp, +[](RCpp & cpp, RCppScope & Struct) {
+                    check(Struct.name == "S");
                 });
                 check(n == 1);
+                */
+            }
+            break; case RCppScope::Type::Global: {
             }
             break; default:
+                printf("You shouldn't be here \n");
                 check(0);
         }
+        return 0;
     });
 }
 
+/*
+TEST_CASE( "parse simpel struct", "[cpp.hpp]" ) {
+    char text[] = R"___(
+        struct S {
+            int x,y;
+        };
+    )___";
+    RCpp cpp(text);
 
-
-
-
-
-
+    cpp.parse([](RCpp & cpp, RCppScope & Global) {
+        switch(Global.type) {
+            break; case RCppScope::Type::Struct: {
+                int n = rose_cpp_parse_struct(cpp, +[](RCpp & cpp, RCppScope & Struct) {
+                    check(Struct.name == "S");
+                    int n = cpp.parse_body([](RCpp & cpp, RCppScope & Scope) {
+                    });
+                    check(n == 1);
+                });
+                check(n == 1);
+            }
+            break; default: check(0);
+        }
+    });
+}
+*/
