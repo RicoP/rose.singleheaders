@@ -109,3 +109,33 @@ TEST_CASE( "parse simpel struct with vars and instance", "[cpp.hpp]" ) {
 
     REQUIRE(count == 3);
 }
+
+
+
+TEST_CASE( "Global variables", "[cpp.hpp]" ) {
+    char text[] = R"___(
+        int x,y;
+    )___";
+    int count = 0;
+    RCpp cpp(text);
+    cpp.user = &count;
+
+    cpp.parse([](RCpp & cpp, RCppScope & Scope) {
+        int * count = (int*)cpp.user;
+        switch(Scope.Type) {
+            break; case RCppScope::Type::VariableDeclaration: {
+                if(Scope.Parent->Type == RCppScope::Type::Global) {
+                    RCppVariableDeclaration * VarDecl = Scope.VariableDeclaration;
+                    check(VarDecl->type == "int");
+                    check((VarDecl->name == "x" || VarDecl->name == "y"));
+                } else {
+                    check(0);
+                }
+                (*count)++;
+            }
+        }
+        return 0;
+    });
+
+    REQUIRE(count == 2);
+}
