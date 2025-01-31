@@ -8,16 +8,12 @@ struct RCppSpan {
     int begin;
     int end;
 
-    static RCppSpan Empty() {
-        return {"", 0, 0};
-    }
+    static RCppSpan Empty() { return {"", 0, 0}; }
 
     int length() { return end - begin; }
 
-    char get() { return p[begin]; }
-
     bool compare(const char * rhs) {
-        const char * lhs = p + begin;
+        const char * lhs     = p + begin;
         const char * lhs_end = p + end;
         for(;;) {
             if(lhs == lhs_end) return *rhs == 0;
@@ -28,28 +24,16 @@ struct RCppSpan {
         }
     }
 
-    char operator*() { return get(); }
+    char operator*() { return p[begin]; }
+    char operator[](int i) { return p[i]; }
     bool operator==(const char * rhs) { return  compare(rhs); }
     bool operator!=(const char * rhs) { return !compare(rhs); }
     operator bool() { return length() != 0; }
 };
 
-struct RCppScope {
-    enum class Type {
-        None = 0,
-        Global,
-        Struct,
-        VariableDeclaration
-    } Type = Type::None;
-    struct RCppScope * Parent = nullptr;
-    union {
-        struct RCppGlobal * Global;
-        struct RCppStruct * Struct;
-        struct RCppVariableDeclaration * VariableDeclaration;
-    };
-};
+struct RCppScope;
 
-typedef int (*RCppParserCallback)(struct RCpp &, struct RCppScope &/*, ...*/);
+typedef int (*RCppParserCallback)(struct RCpp &, RCppScope &/*, ...*/);
 
 struct RCpp {
     // variables
@@ -125,17 +109,37 @@ public:
     }
 
     int parse(RCppParserCallback);
-    int parse_body(RCppScope &, RCppParserCallback);
+    int parse_body(struct RCppScope &, RCppParserCallback);
+};
+
+struct RCppScope {
+    enum class Type {
+        None = 0,
+        Global,
+        Struct,
+        VariableDeclaration
+    } Type = Type::None;
+    struct RCppScope * Parent = nullptr;
+    union {
+        struct RCppGlobal * Global;
+        struct RCppStruct * Struct;
+        struct RCppVariableDeclaration * VariableDeclaration;
+    };
 };
 
 struct RCppGlobal {
     void * user = nullptr;
 };
 
+struct RCppAttribute {
+    void * user = nullptr;
+};
+
 struct RCppStruct {
     void * user = nullptr;
-    RCppSpan name;
-    bool is_class;
+    RCppAttribute * Attribute = nullptr;
+    RCppSpan name = RCppSpan::Empty();
+    bool is_class = false;
 };
 
 struct RCppVariableDeclaration {
@@ -152,7 +156,6 @@ int RCpp::parse(RCppParserCallback callback) {
 }
 
 int RCpp::parse_body(RCppScope & Scope, RCppParserCallback callback) {
-    // TODO: handle errors
     #define STR2(X) #X
     #define STR(X) STR2(X)
     #define assume(X) \
@@ -166,11 +169,21 @@ int RCpp::parse_body(RCppScope & Scope, RCppParserCallback callback) {
     state = 0;
 
     tidy_up_comments();
+
+    RCppAttribute Attribute;
+    RCppAttribute * pAttribute = nullptr;
+
     for(;;) {
         skip_ws();
 
         if(p[i] == 0)   return n;
         if(symbol_skip('}')) return n;
+
+        if(symbol_skip('$')) {
+            pAttribute = &Attribute;
+            assume(symbol_skip('('));
+            assume(symbol_skip(')'));
+        }
 
         bool is_struct = false;
         bool is_class  = false;
@@ -178,6 +191,7 @@ int RCpp::parse_body(RCppScope & Scope, RCppParserCallback callback) {
             n++;
             check(is_struct != is_class);
             RCppStruct Struct { user };
+            Struct.Attribute = pAttribute;
             Struct.is_class = is_class;
             Struct.name = keyword_read();
 
